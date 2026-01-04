@@ -1,3 +1,4 @@
+import 'package:cuantrack/page/all_transactions.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -83,8 +84,6 @@ class _DashboardPageState extends State<DashboardPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 20),
-
-                  // --- HEADER TEXT (Putih di atas Hijau) ---
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -115,12 +114,15 @@ class _DashboardPageState extends State<DashboardPage> {
                           border: Border.all(
                             color: Colors.white,
                             width: 2,
-                          ), // Ring putih di foto
+                          ),
                         ),
-                        child: const CircleAvatar(
-                          radius: 24,
-                          backgroundImage: NetworkImage(
-                            'https://i.pravatar.cc/150?img=11',
+                        child: CircleAvatar(
+                          radius: 35,
+                          backgroundColor: Colors.grey[200], // Background abu muda
+                          child: const Icon(
+                            Icons.person, 
+                            size: 40, 
+                            color: Color(0xFF2E7D32), // Warna Hijau Branding
                           ),
                         ),
                       ),
@@ -200,7 +202,9 @@ class _DashboardPageState extends State<DashboardPage> {
                         ),
                       ),
                       TextButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => const AllTransactionsPage() ,));
+                        },
                         child: const Text("Lihat Semua"),
                       ),
                     ],
