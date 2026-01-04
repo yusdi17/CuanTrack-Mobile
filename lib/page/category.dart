@@ -39,7 +39,7 @@ class _CategoryPageState extends State<CategoryPage> {
                 autofocus: true, // Langsung fokus keyboard muncul
                 decoration: InputDecoration(
                   labelText: "Nama Kategori",
-                  hintText: "Contoh: Sedekah, Jajan, dll",
+                  hintText: "Contoh: Pulsa",
                   prefixIcon: const Icon(Icons.label_outline, color: Color(0xFF2E7D32)),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   focusedBorder: OutlineInputBorder(

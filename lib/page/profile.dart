@@ -13,7 +13,6 @@ class _ProfilePageState extends State<ProfilePage> {
   DateTime _selectedDate = DateTime.now();
 
   // --- Dummy Data Statistik Kategori ---
-  // Ceritanya ini data pengeluaran user per kategori di bulan yang dipilih
   final List<Map<String, dynamic>> _categoryStats = [
     {'category': 'Makanan', 'amount': 1500000, 'color': Colors.orange},
     {'category': 'Transport', 'amount': 600000, 'color': Colors.blue},
@@ -42,7 +41,7 @@ class _ProfilePageState extends State<ProfilePage> {
         children: [
           // --- BACKGROUND HEADER (Hijau Gradasi) ---
           Container(
-            height: 320, // Agak tinggi untuk muat Profile + Chart Header
+            height: 320, 
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
@@ -72,7 +71,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   const SizedBox(height: 20),
                   
-                  // Foto & Nama
+                  // REVISI: Menggunakan Icon Profile, bukan Foto
                   Row(
                     children: [
                       Container(
@@ -81,9 +80,15 @@ class _ProfilePageState extends State<ProfilePage> {
                           color: Colors.white,
                           shape: BoxShape.circle,
                         ),
-                        child: const CircleAvatar(
+                        // Ganti CircleAvatar gambar dengan Icon
+                        child: CircleAvatar(
                           radius: 35,
-                          backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=11'),
+                          backgroundColor: Colors.grey[200], // Background abu muda
+                          child: const Icon(
+                            Icons.person, 
+                            size: 40, 
+                            color: Color(0xFF2E7D32), // Warna Hijau Branding
+                          ),
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -135,7 +140,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              "Statistik Pendapatan",
+                              "Statistik Pengeluaran",
                               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey[800]),
                             ),
                             Container(
@@ -176,8 +181,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               sectionsSpace: 2,
                               centerSpaceRadius: 40,
                               sections: _categoryStats.map((data) {
-                                final isTouched = false; // Bisa dikembangkan untuk interaksi
-                                final double fontSize = isTouched ? 16 : 0; // Hide text inside pie
+                                final isTouched = false; 
                                 final double radius = isTouched ? 60 : 50;
                                 
                                 return PieChartSectionData(
@@ -185,12 +189,11 @@ class _ProfilePageState extends State<ProfilePage> {
                                   value: (data['amount'] as int).toDouble(),
                                   title: '${((data['amount'] as int) / totalExpense * 100).toStringAsFixed(0)}%',
                                   radius: radius,
-                                  titleStyle: TextStyle(
+                                  titleStyle: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
                                   ),
-                                  // Show percentage outside or inside? Let's hide title for cleaner look
                                   showTitle: false, 
                                 );
                               }).toList(),
@@ -198,9 +201,6 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                         ),
                         
-                        // Total Pengeluaran di Tengah (Overlay Text)
-                        // Karena PieChart library fl_chart agak rumit buat text di tengah, 
-                        // kita akali pakai Stack atau widget terpisah di bawah.
                         const SizedBox(height: 20),
                         
                         // LEGEND / KETERANGAN
