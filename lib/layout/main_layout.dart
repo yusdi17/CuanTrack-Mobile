@@ -1,6 +1,8 @@
 import 'package:cuantrack/page/add_transaction.dart';
 import 'package:cuantrack/page/category.dart';
 import 'package:cuantrack/page/dashboard.dart';
+import 'package:cuantrack/page/profile.dart';
+import 'package:cuantrack/page/report.dart';
 import 'package:flutter/material.dart';
 
 class MainLayout extends StatefulWidget {
@@ -18,8 +20,8 @@ class _MainLayoutState extends State<MainLayout> {
   final List<Widget> _screens = [
     const DashboardPage(),
     const CategoryPage(),
-    const Center(child: Text('Halaman Laporan')),
-    const Center(child: Text('Halaman Profile')), 
+    const ReportPage(),
+    const ProfilePage(), 
   ];
 
   void _onItemTapped(int index) {
