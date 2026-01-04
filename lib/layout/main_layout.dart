@@ -1,4 +1,6 @@
 import 'package:cuantrack/page/add_transaction.dart';
+import 'package:cuantrack/page/category.dart';
+import 'package:cuantrack/page/dashboard.dart';
 import 'package:flutter/material.dart';
 
 class MainLayout extends StatefulWidget {
@@ -14,10 +16,10 @@ class _MainLayoutState extends State<MainLayout> {
   // Daftar halaman (Urutan index 0, 1, 2, 3)
   // Perhatikan: Transaksi tidak masuk sini karena dia tombol aksi (FAB)
   final List<Widget> _screens = [
-    const Center(child: Text('Halaman Dashboard (Home)')), // Index 0
-    const Center(child: Text('Halaman Kategori')), // Index 1
-    const Center(child: Text('Halaman Laporan')), // Index 2
-    const Center(child: Text('Halaman Profile')), // Index 3
+    const DashboardPage(),
+    const CategoryPage(),
+    const Center(child: Text('Halaman Laporan')),
+    const Center(child: Text('Halaman Profile')), 
   ];
 
   void _onItemTapped(int index) {

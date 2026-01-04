@@ -217,7 +217,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
                   const SizedBox(height: 16),
 
                   // 3. INPUT BIAYA ADMIN
-                  _buildLabel("Biaya Admin (Opsional)"),
+                  _buildLabel("Biaya Admin"),
                   TextFormField(
                     controller: _adminFeeController,
                     keyboardType: TextInputType.number,
@@ -228,8 +228,8 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
                   ),
                   const SizedBox(height: 16),
 
-                  // 4. INPUT CATATAN
-                  _buildLabel("Catatan"),
+                  // INPUT CATATAN
+                  _buildLabel("Catatan (Opsional)"),
                   TextFormField(
                     controller: _noteController,
                     maxLines: 3,
