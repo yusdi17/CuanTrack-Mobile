@@ -1,3 +1,4 @@
+import 'package:cuantrack/services/product_service.dart'; // Import Service
 import 'package:flutter/material.dart';
 
 class CategoryPage extends StatefulWidget {
@@ -8,38 +9,124 @@ class CategoryPage extends StatefulWidget {
 }
 
 class _CategoryPageState extends State<CategoryPage> {
-  // --- Dummy Data Kategori (Tanpa Tipe) ---
-  final List<Map<String, dynamic>> _categories = [
-    {'name': 'Makanan & Minuman', 'icon': Icons.lunch_dining},
-    {'name': 'Transportasi', 'icon': Icons.directions_car},
-    {'name': 'Gaji & Tunjangan', 'icon': Icons.attach_money},
-    {'name': 'Belanja Bulanan', 'icon': Icons.shopping_cart},
-    {'name': 'Investasi', 'icon': Icons.trending_up},
-    {'name': 'Freelance', 'icon': Icons.laptop_mac},
-    {'name': 'Hiburan', 'icon': Icons.movie},
-    {'name': 'Tagihan', 'icon': Icons.receipt_long},
-  ];
+  // --- State Variables ---
+  bool _isLoading = true;
+  List<dynamic> _products = [];
+  
+  // Panggil Service
+  final ProductService _productService = ProductService();
 
-  // --- Fungsi Menampilkan Popup Tambah Kategori (Simpel) ---
-  void _showAddCategoryDialog() {
-    TextEditingController nameController = TextEditingController();
+  @override
+  void initState() {
+    super.initState();
+    _fetchProducts(); // Ambil data saat halaman dibuka
+  }
+
+  // --- FUNGSI API ---
+  
+  // 1. Ambil Data
+  Future<void> _fetchProducts() async {
+    try {
+      final data = await _productService.getProducts();
+      if (mounted) {
+        setState(() {
+          _products = data;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  // 2. Tambah / Edit Data
+  Future<void> _saveProduct(String name, {int? id}) async {
+    try {
+      bool success;
+      if (id == null) {
+        // Mode Tambah
+        success = await _productService.createProduct(name);
+      } else {
+        // Mode Edit
+        success = await _productService.updateProduct(id, name);
+      }
+
+      if (success && mounted) {
+        Navigator.pop(context); // Tutup Dialog
+        _fetchProducts(); // Refresh List
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(id == null ? "Produk Berhasil Ditambah" : "Produk Berhasil Diupdate"), 
+            backgroundColor: const Color(0xFF2E7D32)
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Gagal: $e"), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  // 3. Hapus Data
+  Future<void> _deleteProduct(int id) async {
+    try {
+      // Tampilkan Konfirmasi Dulu
+      bool confirm = await showDialog(
+        context: context, 
+        builder: (ctx) => AlertDialog(
+          title: const Text("Hapus Produk?"),
+          content: const Text("Data yang dihapus tidak bisa dikembalikan."),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Batal")),
+            TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text("Hapus", style: TextStyle(color: Colors.red))),
+          ],
+        )
+      ) ?? false;
+
+      if (!confirm) return;
+
+      final success = await _productService.deleteProduct(id);
+      if (success && mounted) {
+        _fetchProducts(); // Refresh List
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Produk Berhasil Dihapus"), backgroundColor: Color(0xFF2E7D32)),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Gagal menghapus: $e"), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  // --- UI DIALOG (Popup Form) ---
+  void _showProductDialog({Map<String, dynamic>? product}) {
+    final isEdit = product != null;
+    final TextEditingController nameController = TextEditingController(
+      text: isEdit ? product['name'] : ''
+    );
 
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text("Tambah Kategori", style: TextStyle(fontWeight: FontWeight.bold)),
+          title: Text(isEdit ? "Edit Produk" : "Tambah Produk", style: const TextStyle(fontWeight: FontWeight.bold)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Input Nama Kategori Saja
               TextField(
                 controller: nameController,
-                autofocus: true, // Langsung fokus keyboard muncul
+                autofocus: true,
                 decoration: InputDecoration(
-                  labelText: "Nama Kategori",
-                  hintText: "Contoh: Pulsa",
+                  labelText: "Nama Produk",
+                  hintText: "Contoh: Token Listrik",
                   prefixIcon: const Icon(Icons.label_outline, color: Color(0xFF2E7D32)),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   focusedBorder: OutlineInputBorder(
@@ -58,20 +145,14 @@ class _CategoryPageState extends State<CategoryPage> {
             ElevatedButton(
               onPressed: () {
                 if (nameController.text.isNotEmpty) {
-                  setState(() {
-                    _categories.add({
-                      'name': nameController.text,
-                      'icon': Icons.category, // Icon default untuk kategori baru
-                    });
-                  });
-                  Navigator.pop(context);
+                  _saveProduct(nameController.text, id: isEdit ? product['id'] : null);
                 }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2E7D32),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              child: const Text("Simpan", style: TextStyle(color: Colors.white)),
+              child: Text(isEdit ? "Update" : "Simpan", style: const TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -92,15 +173,10 @@ class _CategoryPageState extends State<CategoryPage> {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF1B5E20),
-                  Color(0xFF2E7D32),
-                  Color(0xFF4CAF50),
-                ],
+                colors: [Color(0xFF1B5E20), Color(0xFF2E7D32), Color(0xFF4CAF50)],
               ),
               borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(30),
-                bottomRight: Radius.circular(30),
+                bottomLeft: Radius.circular(30), bottomRight: Radius.circular(30),
               ),
             ),
           ),
@@ -115,87 +191,77 @@ class _CategoryPageState extends State<CategoryPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        "Daftar Kategori",
-                        style: TextStyle(
-                          fontSize: 24, 
-                          fontWeight: FontWeight.bold, 
-                          color: Colors.white
-                        ),
+                        "Daftar Produk", // Ubah judul jadi Produk
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
-                      // Tombol Tambah
                       Container(
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: IconButton(
-                          onPressed: _showAddCategoryDialog,
+                          onPressed: () => _showProductDialog(),
                           icon: const Icon(Icons.add, color: Colors.white),
-                          tooltip: "Tambah Kategori",
+                          tooltip: "Tambah Produk",
                         ),
                       ),
                     ],
                   ),
                 ),
 
-                // --- LIST KATEGORI ---
+                // --- LIST DATA ---
                 Expanded(
                   child: Container(
                     margin: const EdgeInsets.symmetric(horizontal: 20),
                     decoration: const BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(24),
-                        topRight: Radius.circular(24),
+                        topLeft: Radius.circular(24), topRight: Radius.circular(24),
                       ),
                     ),
-                    child: ListView.separated(
-                      padding: const EdgeInsets.all(20),
-                      itemCount: _categories.length,
-                      separatorBuilder: (context, index) => const Divider(height: 1, indent: 60),
-                      itemBuilder: (context, index) {
-                        final cat = _categories[index];
-                        
-                        return ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                          // Ikon Seragam (Warna Hijau Branding)
-                          leading: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF2E7D32).withOpacity(0.1), // Hijau pudar
-                              shape: BoxShape.circle,
+                    child: _isLoading 
+                      ? const Center(child: CircularProgressIndicator(color: Color(0xFF2E7D32)))
+                      : _products.isEmpty
+                          ? const Center(child: Text("Belum ada produk"))
+                          : ListView.separated(
+                              padding: const EdgeInsets.all(20),
+                              itemCount: _products.length,
+                              separatorBuilder: (context, index) => const Divider(height: 1, indent: 60),
+                              itemBuilder: (context, index) {
+                                final product = _products[index];
+                                
+                                return ListTile(
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                  leading: Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF2E7D32).withOpacity(0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.inventory_2_outlined, color: Color(0xFF2E7D32), size: 24),
+                                  ),
+                                  title: Text(
+                                    product['name'], // Nama dari API
+                                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Colors.black87),
+                                  ),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      // Tombol Edit
+                                      IconButton(
+                                        icon: Icon(Icons.edit, size: 20, color: Colors.blue[300]),
+                                        onPressed: () => _showProductDialog(product: product),
+                                      ),
+                                      // Tombol Hapus
+                                      IconButton(
+                                        icon: Icon(Icons.delete_outline, size: 20, color: Colors.grey[400]),
+                                        onPressed: () => _deleteProduct(product['id']),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
                             ),
-                            child: Icon(
-                              cat['icon'],
-                              color: const Color(0xFF2E7D32), // Hijau pekat
-                              size: 24,
-                            ),
-                          ),
-                          title: Text(
-                            cat['name'],
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600, 
-                              fontSize: 16,
-                              color: Colors.black87
-                            ),
-                          ),
-                          // Tombol Aksi
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: Icon(Icons.delete_outline, size: 20, color: Colors.grey[400]),
-                                onPressed: () {
-                                  setState(() {
-                                    _categories.removeAt(index);
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
                   ),
                 ),
               ],

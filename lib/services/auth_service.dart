@@ -10,10 +10,10 @@ class AuthService {
         data: {'identity': identity, 'password': password},
       );
 
-      final respData = response.data; 
+      final respData = response.data;
       if (respData['token'] != null) {
         final token = respData['token'];
-        final user = respData['data']; 
+        final user = respData['data'];
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('auth_token', token);
@@ -30,15 +30,38 @@ class AuthService {
     }
   }
 
+  Future<Map<String, String>> getUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'name': prefs.getString('user_name') ?? 'Pengguna',
+      'email':
+          prefs.getString('user_email') ??
+          'user@cuantrack.com',
+    };
+  }
+
   // LOGOUT
   Future<void> logout() async {
     try {
-      await dio.post('/logout');
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      if (token != null) {
+        await dio.post('/logout',
+          options: Options(
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Accept': 'application/json',
+            },
+          ),
+        );
+      }
     } catch (e) {
+      print("Logout API error: $e");
     } finally {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('auth_token');
       await prefs.remove('user_name');
+      await prefs.remove('user_email');
     }
   }
 
