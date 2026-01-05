@@ -250,9 +250,9 @@ class _DashboardPageState extends State<DashboardPage> {
                             // 1. Definisikan 5 Kolom (Termasuk Catatan)
                             columns: const [
                               DataColumn(label: Text('Tanggal', style: TextStyle(fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text('Produk', style: TextStyle(fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text('Total', style: TextStyle(fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text('Fee', style: TextStyle(fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Kategori', style: TextStyle(fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Total Bayar', style: TextStyle(fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text('Admin(Fee)', style: TextStyle(fontWeight: FontWeight.bold))),
                               DataColumn(label: Text('Catatan', style: TextStyle(fontWeight: FontWeight.bold))), // <--- TAMBAHAN
                             ],
                             // 2. Mapping Data Rows
