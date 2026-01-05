@@ -1,3 +1,5 @@
+import 'package:cuantrack/services/product_service.dart';
+import 'package:cuantrack/services/sale_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -9,6 +11,10 @@ class AddTransactionPage extends StatefulWidget {
 }
 
 class _AddTransactionPageState extends State<AddTransactionPage> {
+  // --- Services ---
+  final ProductService _productService = ProductService();
+  final SaleService _saleService = SaleService();
+
   // --- Controllers ---
   final TextEditingController _dateController = TextEditingController();
   final TextEditingController _totalController = TextEditingController();
@@ -16,26 +22,91 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
   final TextEditingController _noteController = TextEditingController();
 
   // --- State Variables ---
-  String? _selectedCategory;
+  List<dynamic> _products = [];
+  int? _selectedProductId; // Simpan ID Produk (bukan nama string)
   DateTime _selectedDate = DateTime.now();
-
-  // --- Dummy Data Kategori ---
-  final List<String> _categories = [
-    'Makanan & Minuman',
-    'Produk Digital',
-    'Jasa Service',
-    'E-Commerce',
-    'Lainnya',
-  ];
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    // Gunakan format Indonesia jika sudah setup locale, atau default Inggris
-    _dateController.text = DateFormat('dd MMMM yyyy', 'id_ID').format(_selectedDate);
+    _dateController.text = DateFormat(
+      'dd MMMM yyyy',
+      'id_ID',
+    ).format(_selectedDate);
+    _fetchProducts(); // Ambil list produk untuk dropdown
   }
 
-  // Fungsi Helper untuk menampilkan Date Picker
+  // Ambil Data Produk untuk Dropdown
+  Future<void> _fetchProducts() async {
+    try {
+      final products = await _productService.getProducts();
+      if (mounted) {
+        setState(() {
+          _products = products;
+        });
+      }
+    } catch (e) {
+      // Error silent atau tampilkan snackbar
+    }
+  }
+
+  // Simpan Transaksi
+  Future<void> _saveTransaction() async {
+    // Validasi Sederhana
+    if (_totalController.text.isEmpty) {
+      _showError("Total bayar wajib diisi!");
+      return;
+    }
+    if (_selectedProductId == null) {
+      _showError("Pilih kategori/produk dulu!");
+      return;
+    }
+    if (_adminFeeController.text.isEmpty) {
+      _showError("Biaya admin wajib diisi (isi 0 jika tidak ada)");
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Format Tanggal untuk API (YYYY-MM-DD)
+      String formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate);
+
+      double total = double.parse(_totalController.text);
+      double fee = double.parse(_adminFeeController.text);
+
+      bool success = await _saleService.createSale(
+        productId: _selectedProductId!,
+        date: formattedDate,
+        totalAmount: total,
+        fee: fee,
+        note: _noteController.text.isEmpty ? null : _noteController.text,
+      );
+
+      if (success && mounted) {
+        Navigator.pop(context, true); // Kembali & beri sinyal sukses
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Transaksi Berhasil Disimpan!"),
+            backgroundColor: Color(0xFF2E7D32),
+          ),
+        );
+      }
+    } catch (e) {
+      _showError("Gagal: $e");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+
+  // Fungsi Helper Date Picker
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -46,7 +117,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF2E7D32), // Warna Hijau
+              primary: Color(0xFF2E7D32),
               onPrimary: Colors.white,
               onSurface: Colors.black,
             ),
@@ -58,7 +129,10 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
     if (picked != null && picked != _selectedDate) {
       setState(() {
         _selectedDate = picked;
-        _dateController.text = DateFormat('dd MMMM yyyy', 'id_ID').format(picked);
+        _dateController.text = DateFormat(
+          'dd MMMM yyyy',
+          'id_ID',
+        ).format(picked);
       });
     }
   }
@@ -78,9 +152,9 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
       backgroundColor: Colors.grey[100],
       body: Stack(
         children: [
-          // --- BACKGROUND HEADER (Hijau Gradasi) ---
+          // HEADER HIJAU
           Container(
-            height: 220, // Tinggi header
+            height: 220,
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -101,14 +175,20 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
           SafeArea(
             child: Column(
               children: [
-                // --- CUSTOM HEADER (Back & Title) ---
+                // NAVBAR
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 10,
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new,
+                          color: Colors.white,
+                        ),
                         onPressed: () => Navigator.pop(context),
                       ),
                       const Text(
@@ -125,6 +205,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
                           _totalController.clear();
                           _adminFeeController.clear();
                           _noteController.clear();
+                          setState(() => _selectedProductId = null);
                         },
                       ),
                     ],
@@ -133,7 +214,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
 
                 const SizedBox(height: 10),
 
-                // --- FORM CONTAINER (Kartu Putih) ---
+                // FORM CARD
                 Expanded(
                   child: Container(
                     margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -149,7 +230,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // --- SECTION 1: TOTAL BAYAR ---
+                          // INPUT NOMINAL BESAR
                           const Text(
                             "Total Masuk",
                             style: TextStyle(
@@ -160,7 +241,10 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
                           ),
                           const SizedBox(height: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.grey[50],
                               borderRadius: BorderRadius.circular(16),
@@ -170,7 +254,9 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFF2E7D32).withOpacity(0.1),
+                                  color: const Color(
+                                    0xFF2E7D32,
+                                  ).withOpacity(0.1),
                                   blurRadius: 10,
                                   offset: const Offset(0, 4),
                                 ),
@@ -202,9 +288,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
 
                           const SizedBox(height: 30),
 
-                          // --- SECTION 2: INPUT FORM ---
-                          
-                          // 1. INPUT TANGGAL
+                          // INPUT TANGGAL
                           _buildLabel("Tanggal Transaksi"),
                           TextFormField(
                             controller: _dateController,
@@ -217,32 +301,45 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
                           ),
                           const SizedBox(height: 20),
 
-                          // 2. INPUT KATEGORI
-                          _buildLabel("Kategori"),
-                          DropdownButtonFormField<String>(
-                            value: _selectedCategory,
-                            hint: const Text("Pilih Kategori"),
-                            items: _categories.map((String category) {
-                              return DropdownMenuItem<String>(
-                                value: category,
-                                child: Text(category),
-                              );
-                            }).toList(),
-                            onChanged: (String? newValue) {
-                              setState(() {
-                                _selectedCategory = newValue;
-                              });
-                            },
-                            decoration: _inputDecoration(
-                              hint: "Pilih Kategori",
-                              icon: Icons.category_outlined,
-                            ),
-                            icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                          ),
+                          // INPUT KATEGORI (DROPDOWN DARI API)
+                          _buildLabel("Kategori / Produk"),
+                          _products.isEmpty
+                              ? const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 12),
+                                  child: Center(
+                                    child: Text(
+                                      "Memuat produk...",
+                                      style: TextStyle(color: Colors.grey),
+                                    ),
+                                  ),
+                                )
+                              : DropdownButtonFormField<int>(
+                                  value: _selectedProductId,
+                                  hint: const Text("Pilih Produk"),
+                                  items: _products.map((dynamic item) {
+                                    return DropdownMenuItem<int>(
+                                      value: item['id'], // Kirim ID ke backend
+                                      child: Text(item['name']),
+                                    );
+                                  }).toList(),
+                                  onChanged: (int? newValue) {
+                                    setState(
+                                      () => _selectedProductId = newValue,
+                                    );
+                                  },
+                                  decoration: _inputDecoration(
+                                    hint: "Pilih Produk",
+                                    icon: Icons.category_outlined,
+                                  ),
+                                  icon: const Icon(
+                                    Icons.keyboard_arrow_down_rounded,
+                                  ),
+                                ),
+
                           const SizedBox(height: 20),
 
-                          // 3. INPUT BIAYA ADMIN
-                          _buildLabel("Biaya Admin"),
+                          // INPUT FEE
+                          _buildLabel("Biaya Admin / Fee"),
                           TextFormField(
                             controller: _adminFeeController,
                             keyboardType: TextInputType.number,
@@ -253,7 +350,7 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
                           ),
                           const SizedBox(height: 20),
 
-                          // 4. INPUT CATATAN
+                          // INPUT CATATAN
                           _buildLabel("Catatan (Opsional)"),
                           TextFormField(
                             controller: _noteController,
@@ -264,8 +361,8 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
                               isMultiLine: true,
                             ),
                           ),
-                          
-                          const SizedBox(height: 80), // Spasi bawah agar tidak tertutup tombol
+
+                          const SizedBox(height: 80),
                         ],
                       ),
                     ),
@@ -277,43 +374,14 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
         ],
       ),
 
-      // --- TOMBOL SIMPAN ---
+      // TOMBOL SIMPAN
       bottomNavigationBar: Container(
-        color: Colors.white, // Background putih di area tombol
+        color: Colors.white,
         padding: const EdgeInsets.all(20),
         child: SizedBox(
           height: 55,
           child: ElevatedButton(
-            onPressed: () {
-              // Validasi Sederhana
-              if (_totalController.text.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Total bayar wajib diisi!"),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-                return;
-              }
-              if (_selectedCategory == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Pilih kategori dulu!"),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-                return;
-              }
-
-              // Simulasi Simpan
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Transaksi Berhasil Disimpan!"),
-                  backgroundColor: Color(0xFF2E7D32),
-                ),
-              );
-            },
+            onPressed: _isLoading ? null : _saveTransaction,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2E7D32),
               shape: RoundedRectangleBorder(
@@ -322,14 +390,16 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
               elevation: 4,
               shadowColor: const Color(0xFF2E7D32).withOpacity(0.4),
             ),
-            child: const Text(
-              "Simpan Transaksi",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
+            child: _isLoading
+                ? const CircularProgressIndicator(color: Colors.white)
+                : const Text(
+                    "Simpan Transaksi",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
           ),
         ),
       ),

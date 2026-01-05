@@ -1,6 +1,7 @@
-import 'package:cuantrack/Auth/forgotPassword.dart';
-import 'package:cuantrack/Auth/register.dart';
-import 'package:cuantrack/layout/main_layout.dart';
+import 'package:cuantrack/Auth/forgotPassword.dart'; // Sesuaikan path
+import 'package:cuantrack/Auth/register.dart';       // Sesuaikan path
+import 'package:cuantrack/layout/main_layout.dart';  // Sesuaikan path
+import 'package:cuantrack/services/auth_service.dart'; // <--- Import Service
 import 'package:flutter/material.dart';
 
 class LoginPage extends StatefulWidget {
@@ -13,29 +14,46 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
 
-  final TextEditingController _emailController = TextEditingController();
+  // Gunakan nama controller yang lebih umum
+  final TextEditingController _identityController = TextEditingController(); 
   final TextEditingController _passwordController = TextEditingController();
 
   bool _isPasswordVisible = false;
   bool _isLoading = false;
   bool _isGoogleLoading = false;
 
+  // Panggil Service
+  final AuthService _authService = AuthService();
+
+  // --- FUNGSI LOGIN UTAMA ---
   Future<void> _handleLogin() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
-      await Future.delayed(const Duration(seconds: 2));
+    // 1. Validasi Form UI
+    if (!_formKey.currentState!.validate()) return;
 
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+    // 2. Tutup Keyboard
+    FocusScope.of(context).unfocus();
 
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // 3. Panggil API Lewat Service
+      // Controller dikirim sebagai 'identity' (bisa email atau username)
+      bool success = await _authService.login(
+        _identityController.text, 
+        _passwordController.text
+      );
+
+      if (success) {
+        if (!mounted) return;
+        
+        // 4. Sukses: Tampilkan Pesan & Pindah Halaman
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Login Berhasil!'),
-            backgroundColor: Colors.green,
+            content: Text('Login Berhasil! Selamat Datang.'),
+            backgroundColor: Color(0xFF2E7D32), // Hijau CuanTrack
+            behavior: SnackBarBehavior.floating,
           ),
         );
 
@@ -44,32 +62,43 @@ class _LoginPageState extends State<LoginPage> {
           MaterialPageRoute(builder: (context) => const MainLayout()),
         );
       }
+    } catch (e) {
+      // 5. Gagal: Tampilkan Error dari Backend
+      if (!mounted) return;
+      
+      // Bersihkan pesan error (hapus kata "Exception:")
+      String errorMessage = e.toString().replaceAll('Exception: ', '');
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
+
   Future<void> _handleGoogleLogin() async {
-    setState(() {
-      _isGoogleLoading = true;
-    });
-
-    // Simulasi koneksi ke Google/Firebase
-    await Future.delayed(const Duration(seconds: 2));
-
+    setState(() => _isGoogleLoading = true);
+    await Future.delayed(const Duration(seconds: 2)); // Simulasi
     if (mounted) {
-      setState(() {
-        _isGoogleLoading = false;
-      });
+      setState(() => _isGoogleLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Login Google Berhasil!'),
-          backgroundColor: Colors.blueAccent,
-        ),
+        const SnackBar(content: Text('Fitur Google Login Segera Hadir!')),
       );
     }
   }
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _identityController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -88,10 +117,11 @@ class _LoginPageState extends State<LoginPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // --- LOGO ---
                   const Icon(
                     Icons.account_balance_wallet_rounded,
                     size: 80,
-                    color: Colors.blueAccent,
+                    color: Colors.blueAccent, // Bisa diganti Color(0xFF2E7D32) biar senada
                   ),
                   const SizedBox(height: 20),
                   const Text(
@@ -111,14 +141,14 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 40),
 
-                  // Input Email
+                  // --- INPUT EMAIL / USERNAME ---
                   TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
+                    controller: _identityController,
+                    keyboardType: TextInputType.emailAddress, // Tetap emailAddress agar keyboard ada '@'
                     textInputAction: TextInputAction.next,
                     decoration: InputDecoration(
-                      labelText: 'Email',
-                      prefixIcon: const Icon(Icons.email_outlined),
+                      labelText: 'Email / Username', // Label diubah
+                      prefixIcon: const Icon(Icons.person_outline), // Icon diganti lebih umum
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -128,16 +158,16 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     validator: (value) {
-                      if (value == null || value.isEmpty)
-                        return 'Email tidak boleh kosong';
-                      if (!value.contains('@'))
-                        return 'Format email tidak valid';
-                      return null;
+                      if (value == null || value.isEmpty) {
+                        return 'Email atau Username tidak boleh kosong';
+                      }
+                      // HAPUS validasi '@' agar username bisa masuk
+                      return null; 
                     },
                   ),
                   const SizedBox(height: 20),
 
-                  // Input Password
+                  // --- INPUT PASSWORD ---
                   TextFormField(
                     controller: _passwordController,
                     obscureText: !_isPasswordVisible,
@@ -166,15 +196,14 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     validator: (value) {
-                      if (value == null || value.isEmpty)
+                      if (value == null || value.isEmpty) {
                         return 'Password tidak boleh kosong';
-                      if (value.length < 6)
-                        return 'Password minimal 6 karakter';
+                      }
                       return null;
                     },
                   ),
 
-                  // Forgot Password
+                  // --- LUPA PASSWORD ---
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
@@ -191,13 +220,13 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Button Login Email
+                  // --- TOMBOL LOGIN ---
                   SizedBox(
                     height: 50,
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _handleLogin,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueAccent,
+                        backgroundColor: Colors.blueAccent, // Sesuaikan warna tema
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -224,106 +253,97 @@ class _LoginPageState extends State<LoginPage> {
                   ),
 
                   const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Divider(color: Colors.grey[300], thickness: 1),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          'ATAU',
-                          style: TextStyle(
-                            color: Colors.grey[500],
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Divider(color: Colors.grey[300], thickness: 1),
-                      ),
-                    ],
-                  ),
+                  
+                  // --- DIVIDER ATAU ---
+                  // Row(
+                  //   children: [
+                  //     Expanded(child: Divider(color: Colors.grey[300], thickness: 1)),
+                  //     Padding(
+                  //       padding: const EdgeInsets.symmetric(horizontal: 16),
+                  //       child: Text(
+                  //         'ATAU',
+                  //         style: TextStyle(
+                  //           color: Colors.grey[500],
+                  //           fontSize: 12,
+                  //           fontWeight: FontWeight.bold,
+                  //         ),
+                  //       ),
+                  //     ),
+                  //     Expanded(child: Divider(color: Colors.grey[300], thickness: 1)),
+                  //   ],
+                  // ),
 
                   const SizedBox(height: 24),
 
-                  // --- BUTTON GOOGLE LOGIN ---
-                  SizedBox(
-                    height: 50,
-                    child: OutlinedButton(
-                      onPressed: _isGoogleLoading ? null : _handleGoogleLogin,
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: Colors.grey[300]!),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        backgroundColor: Colors.white,
-                      ),
-                      child: _isGoogleLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                color: Colors.blueAccent,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                // Logo Google (Menggunakan Network Image sementara)
-                                // Nanti sebaiknya ganti dengan Image.asset('assets/google_logo.png')
-                                Image.network(
-                                  'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1200px-Google_%22G%22_logo.svg.png',
-                                  height: 24,
-                                  width: 24,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      const Icon(Icons.g_mobiledata, size: 28),
-                                ),
-                                const SizedBox(width: 12),
-                                const Text(
-                                  'Masuk dengan Google',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                              ],
-                            ),
-                    ),
-                  ),
+                  // --- GOOGLE LOGIN (UI Saja) ---
+                  // SizedBox(
+                  //   height: 50,
+                  //   child: OutlinedButton(
+                  //     onPressed: _isGoogleLoading ? null : _handleGoogleLogin,
+                  //     style: OutlinedButton.styleFrom(
+                  //       side: BorderSide(color: Colors.grey[300]!),
+                  //       shape: RoundedRectangleBorder(
+                  //         borderRadius: BorderRadius.circular(12),
+                  //       ),
+                  //       backgroundColor: Colors.white,
+                  //     ),
+                  //     child: _isGoogleLoading
+                  //         ? const SizedBox(
+                  //             height: 20,
+                  //             width: 20,
+                  //             child: CircularProgressIndicator(
+                  //               color: Colors.blueAccent,
+                  //               strokeWidth: 2,
+                  //             ),
+                  //           )
+                  //         : Row(
+                  //             mainAxisAlignment: MainAxisAlignment.center,
+                  //             children: [
+                  //               // Placeholder Icon Google
+                  //               const Icon(Icons.g_mobiledata, size: 32, color: Colors.red), 
+                  //               const SizedBox(width: 8),
+                  //               const Text(
+                  //                 'Masuk dengan Google',
+                  //                 style: TextStyle(
+                  //                   fontSize: 16,
+                  //                   fontWeight: FontWeight.bold,
+                  //                   color: Colors.black87,
+                  //                 ),
+                  //               ),
+                  //             ],
+                  //           ),
+                  //   ),
+                  // ),
 
                   const SizedBox(height: 30),
 
-                  // Footer (Register)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Belum punya akun? ',
-                        style: TextStyle(color: Colors.grey[700]),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const RegisterPage(),
-                            ),
-                          );
-                        },
-                        child: const Text(
-                          'Daftar Sekarang',
-                          style: TextStyle(
-                            color: Colors.blueAccent,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  // --- DAFTAR SEKARANG ---
+                  // Row(
+                  //   mainAxisAlignment: MainAxisAlignment.center,
+                  //   children: [
+                  //     Text(
+                  //       'Belum punya akun? ',
+                  //       style: TextStyle(color: Colors.grey[700]),
+                  //     ),
+                  //     GestureDetector(
+                  //       onTap: () {
+                  //         Navigator.push(
+                  //           context,
+                  //           MaterialPageRoute(
+                  //             builder: (context) => const RegisterPage(),
+                  //           ),
+                  //         );
+                  //       },
+                  //       child: const Text(
+                  //         'Daftar Sekarang',
+                  //         style: TextStyle(
+                  //           color: Colors.blueAccent,
+                  //           fontWeight: FontWeight.bold,
+                  //         ),
+                  //       ),
+                  //     ),
+                  //   ],
+                  // ),
                 ],
               ),
             ),
