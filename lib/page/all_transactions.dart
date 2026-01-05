@@ -142,8 +142,8 @@ class _AllTransactionsPageState extends State<AllTransactionsPage> {
                       columns: const [
                         DataColumn(label: Text('Tanggal', style: TextStyle(fontWeight: FontWeight.bold))),
                         DataColumn(label: Text('Kategori', style: TextStyle(fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text('Total', style: TextStyle(fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text('Fee', style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('Total Bayar', style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('Admin(Fee)', style: TextStyle(fontWeight: FontWeight.bold))),
                         DataColumn(label: Text('Catatan', style: TextStyle(fontWeight: FontWeight.bold))),
                         DataColumn(label: Text('Aksi', style: TextStyle(fontWeight: FontWeight.bold))), // <--- KOLOM BARU
                       ],
