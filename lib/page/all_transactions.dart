@@ -1,3 +1,4 @@
+import 'package:cuantrack/page/add_transaction.dart';
 import 'package:cuantrack/services/sale_service.dart'; // Pastikan path import benar
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -46,6 +47,42 @@ class _AllTransactionsPageState extends State<AllTransactionsPage> {
         );
       }
     }
+  }
+
+  // Fungsi Konfirmasi Hapus
+  void _confirmDelete(int id) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Hapus Transaksi?"),
+        content: const Text("Data yang dihapus tidak dapat dikembalikan."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Batal")),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx); // Tutup dialog
+              setState(() => _isLoading = true);
+              
+              try {
+                final success = await _saleService.deleteSale(id);
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Transaksi berhasil dihapus"), backgroundColor: Color(0xFF2E7D32))
+                  );
+                  _fetchTransactions(); // Refresh data
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Gagal: $e"), backgroundColor: Colors.red)
+                );
+                setState(() => _isLoading = false);
+              }
+            },
+            child: const Text("Hapus", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -98,6 +135,7 @@ class _AllTransactionsPageState extends State<AllTransactionsPage> {
                   ),
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
+                    // ... kode sebelumnya ...
                     child: DataTable(
                       columnSpacing: 20,
                       headingRowColor: MaterialStateProperty.all(Colors.grey[100]),
@@ -107,70 +145,55 @@ class _AllTransactionsPageState extends State<AllTransactionsPage> {
                         DataColumn(label: Text('Total', style: TextStyle(fontWeight: FontWeight.bold))),
                         DataColumn(label: Text('Fee', style: TextStyle(fontWeight: FontWeight.bold))),
                         DataColumn(label: Text('Catatan', style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(label: Text('Aksi', style: TextStyle(fontWeight: FontWeight.bold))), // <--- KOLOM BARU
                       ],
                       rows: _transactions.map((data) {
-                        // Parsing Data
+                        // ... parsing variable (date, total, fee, dll) sama seperti sebelumnya ...
                         DateTime date = DateTime.parse(data['date']);
                         double total = double.parse(data['total_amount'].toString());
                         double fee = double.parse(data['fee'].toString());
-                        String category = data['product'] ?? '-'; // Menggunakan nama produk sebagai kategori
-                        
-                        // Karena API ini SalesController, diasumsikan semua adalah Pemasukan (Income)
-                        // Jika nanti ada ExpenseController, bisa tambah logika cek tipe.
-                        bool isIncome = true; 
+                        String category = data['product'] ?? '-';
 
                         return DataRow(cells: [
-                          // 1. Tanggal
                           DataCell(Text(DateFormat('dd/MM/yy').format(date))),
+                          DataCell(Text(category)),
+                          DataCell(Text(currencyFormatter.format(total), style: const TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.bold))),
+                          DataCell(Text(currencyFormatter.format(fee))),
+                          DataCell(SizedBox(width: 100, child: Text(data['note'] ?? '-', overflow: TextOverflow.ellipsis))),
                           
-                          // 2. Kategori / Produk
-                          DataCell(
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: isIncome ? Colors.green[50] : Colors.red[50],
-                                borderRadius: BorderRadius.circular(8),
+                          // --- KOLOM AKSI (Edit & Hapus) ---
+                          DataCell(Row(
+                            children: [
+                              // TOMBOL EDIT
+                              IconButton(
+                                icon: const Icon(Icons.edit, size: 20, color: Colors.blue),
+                                onPressed: () async {
+                                  // Navigasi ke Halaman Form dengan membawa data transaksi
+                                  final result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => AddTransactionPage(transactionToEdit: data), // Kirim data
+                                    ),
+                                  );
+                                  // Jika sukses update, refresh list
+                                  if (result == true) {
+                                    _fetchTransactions();
+                                  }
+                                },
                               ),
-                              child: Text(
-                                category,
-                                style: TextStyle(
-                                  color: isIncome ? Colors.green[800] : Colors.red[800],
-                                  fontSize: 12, 
-                                  fontWeight: FontWeight.w600
-                                ),
+                              // TOMBOL HAPUS
+                              IconButton(
+                                icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+                                onPressed: () {
+                                  _confirmDelete(data['id']);
+                                },
                               ),
-                            )
-                          ),
-                          
-                          // 3. Total (Pendapatan Kotor)
-                          DataCell(Text(
-                            currencyFormatter.format(total),
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF2E7D32), // Hijau Uang
-                            ),
+                            ],
                           )),
-                          
-                          // 4. Fee (Pendapatan Bersih)
-                          DataCell(Text(
-                            currencyFormatter.format(fee),
-                            style: const TextStyle(color: Colors.black87),
-                          )),
-                          
-                          // 5. Catatan
-                          DataCell(
-                            SizedBox(
-                              width: 150,
-                              child: Text(
-                                data['note'] ?? '-',
-                                style: const TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            )
-                          ),
                         ]);
                       }).toList(),
                     ),
+                    // ... kode setelahnya ...
                   ),
                 ),
               ),

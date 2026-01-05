@@ -50,4 +50,37 @@ class SaleService {
       );
     }
   }
+
+  // UPDATE
+  Future<bool> updateSale({
+    required int id,
+    required int productId,
+    required String date,
+    required double totalAmount,
+    required double fee,
+    String? note,
+  }) async {
+    try {
+      final response = await dio.put('/transactions/$id', data: {
+        'product_id': productId,
+        'date': date,
+        'total_amount': totalAmount,
+        'fee': fee,
+        'note': note,
+      });
+      return response.data['success'] == true;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Gagal update transaksi');
+    }
+  }
+
+  // HAPUS
+  Future<bool> deleteSale(int id) async {
+    try {
+      final response = await dio.delete('/transactions/$id');
+      return response.data['success'] == true;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Gagal menghapus transaksi');
+    }
+  }
 }
