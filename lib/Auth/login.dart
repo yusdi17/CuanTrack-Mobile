@@ -1,7 +1,7 @@
-import 'package:cuantrack/Auth/forgotPassword.dart'; // Sesuaikan path
-import 'package:cuantrack/Auth/register.dart';       // Sesuaikan path
-import 'package:cuantrack/layout/main_layout.dart';  // Sesuaikan path
-import 'package:cuantrack/services/auth_service.dart'; // <--- Import Service
+import 'package:cuantrack/Auth/forgotPassword.dart';
+import 'package:cuantrack/Auth/register.dart';
+import 'package:cuantrack/layout/main_layout.dart';
+import 'package:cuantrack/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
 class LoginPage extends StatefulWidget {
@@ -13,46 +13,35 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-
-  // Gunakan nama controller yang lebih umum
-  final TextEditingController _identityController = TextEditingController(); 
+  final TextEditingController _identityController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
   bool _isPasswordVisible = false;
   bool _isLoading = false;
-  bool _isGoogleLoading = false;
 
-  // Panggil Service
   final AuthService _authService = AuthService();
+  
+  // WARNA TEMA (Hijau CuanTrack)
+  final Color _primaryColor = const Color(0xFF2E7D32); 
 
-  // --- FUNGSI LOGIN UTAMA ---
   Future<void> _handleLogin() async {
-    // 1. Validasi Form UI
     if (!_formKey.currentState!.validate()) return;
-
-    // 2. Tutup Keyboard
     FocusScope.of(context).unfocus();
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
-      // 3. Panggil API Lewat Service
-      // Controller dikirim sebagai 'identity' (bisa email atau username)
       bool success = await _authService.login(
-        _identityController.text, 
+        _identityController.text,
         _passwordController.text
       );
 
       if (success) {
         if (!mounted) return;
-        
-        // 4. Sukses: Tampilkan Pesan & Pindah Halaman
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Login Berhasil! Selamat Datang.'),
-            backgroundColor: Color(0xFF2E7D32), // Hijau CuanTrack
+          SnackBar(
+            content: const Text('Login Berhasil!'),
+            backgroundColor: _primaryColor, // Hijau
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -63,12 +52,8 @@ class _LoginPageState extends State<LoginPage> {
         );
       }
     } catch (e) {
-      // 5. Gagal: Tampilkan Error dari Backend
       if (!mounted) return;
-      
-      // Bersihkan pesan error (hapus kata "Exception:")
       String errorMessage = e.toString().replaceAll('Exception: ', '');
-      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(errorMessage),
@@ -77,22 +62,7 @@ class _LoginPageState extends State<LoginPage> {
         ),
       );
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _handleGoogleLogin() async {
-    setState(() => _isGoogleLoading = true);
-    await Future.delayed(const Duration(seconds: 2)); // Simulasi
-    if (mounted) {
-      setState(() => _isGoogleLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Fitur Google Login Segera Hadir!')),
-      );
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -106,7 +76,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.white, // Latar bersih
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -117,40 +87,44 @@ class _LoginPageState extends State<LoginPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // --- LOGO ---
-                  const Icon(
-                    Icons.account_balance_wallet_rounded,
-                    size: 80,
-                    color: Colors.blueAccent, // Bisa diganti Color(0xFF2E7D32) biar senada
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Selamat Datang',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                  // --- LOGO (Gunakan Asset agar selaras dengan Splash) ---
+                  Center(
+                    child: Image.asset(
+                      'assets/splash.png', // Pastikan nama file sesuai (logo.png/splash.png)
+                      width: 150,
+                      height: 150,
                     ),
                   ),
-                  const SizedBox(height: 8),
                   Text(
-                    'Masuk untuk mengelola keuangan Anda',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                  ),
+                'Kelola keuanganmu dengan bijak',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14, 
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.5,
+                  fontFamily: 'Poppins', 
+                ),
+              ),
                   const SizedBox(height: 40),
 
                   // --- INPUT EMAIL / USERNAME ---
                   TextFormField(
                     controller: _identityController,
-                    keyboardType: TextInputType.emailAddress, // Tetap emailAddress agar keyboard ada '@'
+                    keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
+                    cursorColor: _primaryColor,
                     decoration: InputDecoration(
-                      labelText: 'Email / Username', // Label diubah
-                      prefixIcon: const Icon(Icons.person_outline), // Icon diganti lebih umum
+                      labelText: 'Email / Username',
+                      labelStyle: TextStyle(color: Colors.grey[700]),
+                      prefixIcon: Icon(Icons.person_outline, color: _primaryColor),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
+                      ),
+                      // Saat diklik warnanya hijau
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: _primaryColor, width: 2),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -159,10 +133,9 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Email atau Username tidak boleh kosong';
+                        return 'Email atau Username wajib diisi';
                       }
-                      // HAPUS validasi '@' agar username bisa masuk
-                      return null; 
+                      return null;
                     },
                   ),
                   const SizedBox(height: 20),
@@ -172,14 +145,15 @@ class _LoginPageState extends State<LoginPage> {
                     controller: _passwordController,
                     obscureText: !_isPasswordVisible,
                     textInputAction: TextInputAction.done,
+                    cursorColor: _primaryColor,
                     decoration: InputDecoration(
                       labelText: 'Password',
-                      prefixIcon: const Icon(Icons.lock_outline),
+                      labelStyle: TextStyle(color: Colors.grey[700]),
+                      prefixIcon: Icon(Icons.lock_outline, color: _primaryColor),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _isPasswordVisible
-                              ? Icons.visibility
-                              : Icons.visibility_off,
+                          _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                          color: Colors.grey,
                         ),
                         onPressed: () {
                           setState(() {
@@ -190,17 +164,17 @@ class _LoginPageState extends State<LoginPage> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: _primaryColor, width: 2),
+                      ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(color: Colors.grey[300]!),
                       ),
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Password tidak boleh kosong';
-                      }
-                      return null;
-                    },
+                    validator: (value) =>
+                        value!.isEmpty ? 'Password wajib diisi' : null,
                   ),
 
                   // --- LUPA PASSWORD ---
@@ -208,14 +182,15 @@ class _LoginPageState extends State<LoginPage> {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ForgotPasswordPage(),
-                          ),
-                        );
+                         Navigator.push(
+                           context,
+                           MaterialPageRoute(builder: (context) => const ForgotPasswordPage()),
+                         );
                       },
-                      child: const Text('Lupa Password?'),
+                      child: Text(
+                        'Lupa Password?',
+                        style: TextStyle(color: Colors.grey[600]), // Warna netral
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -226,11 +201,12 @@ class _LoginPageState extends State<LoginPage> {
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _handleLogin,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueAccent, // Sesuaikan warna tema
+                        backgroundColor: _primaryColor, // Hijau CuanTrack
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        elevation: 2,
+                        elevation: 3,
+                        shadowColor: _primaryColor.withOpacity(0.4),
                       ),
                       child: _isLoading
                           ? const SizedBox(
@@ -252,92 +228,27 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
 
-                  const SizedBox(height: 24),
-                  
-                  // --- DIVIDER ATAU ---
-                  // Row(
-                  //   children: [
-                  //     Expanded(child: Divider(color: Colors.grey[300], thickness: 1)),
-                  //     Padding(
-                  //       padding: const EdgeInsets.symmetric(horizontal: 16),
-                  //       child: Text(
-                  //         'ATAU',
-                  //         style: TextStyle(
-                  //           color: Colors.grey[500],
-                  //           fontSize: 12,
-                  //           fontWeight: FontWeight.bold,
-                  //         ),
-                  //       ),
-                  //     ),
-                  //     Expanded(child: Divider(color: Colors.grey[300], thickness: 1)),
-                  //   ],
-                  // ),
+                  // const SizedBox(height: 30),
 
-                  const SizedBox(height: 24),
-
-                  // --- GOOGLE LOGIN (UI Saja) ---
-                  // SizedBox(
-                  //   height: 50,
-                  //   child: OutlinedButton(
-                  //     onPressed: _isGoogleLoading ? null : _handleGoogleLogin,
-                  //     style: OutlinedButton.styleFrom(
-                  //       side: BorderSide(color: Colors.grey[300]!),
-                  //       shape: RoundedRectangleBorder(
-                  //         borderRadius: BorderRadius.circular(12),
-                  //       ),
-                  //       backgroundColor: Colors.white,
-                  //     ),
-                  //     child: _isGoogleLoading
-                  //         ? const SizedBox(
-                  //             height: 20,
-                  //             width: 20,
-                  //             child: CircularProgressIndicator(
-                  //               color: Colors.blueAccent,
-                  //               strokeWidth: 2,
-                  //             ),
-                  //           )
-                  //         : Row(
-                  //             mainAxisAlignment: MainAxisAlignment.center,
-                  //             children: [
-                  //               // Placeholder Icon Google
-                  //               const Icon(Icons.g_mobiledata, size: 32, color: Colors.red), 
-                  //               const SizedBox(width: 8),
-                  //               const Text(
-                  //                 'Masuk dengan Google',
-                  //                 style: TextStyle(
-                  //                   fontSize: 16,
-                  //                   fontWeight: FontWeight.bold,
-                  //                   color: Colors.black87,
-                  //                 ),
-                  //               ),
-                  //             ],
-                  //           ),
-                  //   ),
-                  // ),
-
-                  const SizedBox(height: 30),
-
-                  // --- DAFTAR SEKARANG ---
+                  // --- DAFTAR SEKARANG (Diaktifkan & Dirapikan) ---
                   // Row(
                   //   mainAxisAlignment: MainAxisAlignment.center,
                   //   children: [
                   //     Text(
                   //       'Belum punya akun? ',
-                  //       style: TextStyle(color: Colors.grey[700]),
+                  //       style: TextStyle(color: Colors.grey[600]),
                   //     ),
                   //     GestureDetector(
                   //       onTap: () {
                   //         Navigator.push(
                   //           context,
-                  //           MaterialPageRoute(
-                  //             builder: (context) => const RegisterPage(),
-                  //           ),
+                  //           MaterialPageRoute(builder: (context) => const RegisterPage()),
                   //         );
                   //       },
-                  //       child: const Text(
+                  //       child: Text(
                   //         'Daftar Sekarang',
                   //         style: TextStyle(
-                  //           color: Colors.blueAccent,
+                  //           color: _primaryColor, // Hijau
                   //           fontWeight: FontWeight.bold,
                   //         ),
                   //       ),
