@@ -180,13 +180,13 @@ class _DashboardPageState extends State<DashboardPage> {
                     Row(
                       children: [
                         Expanded(child: _buildSummaryCard(
-                          title: "Pemasukan",
+                          title: "Pendapatan Kotor",
                           amount: _isLoading ? "..." : currencyFormatter.format(_grossIncome),
                           icon: Icons.arrow_downward_rounded, color: Colors.blueAccent, textColor: Colors.blue[900]!
                         )),
                         const SizedBox(width: 16),
                         Expanded(child: _buildSummaryCard(
-                          title: "Keuntungan",
+                          title: "Pendapatan Bersih",
                           amount: _isLoading ? "..." : currencyFormatter.format(_netIncome),
                           icon: Icons.wallet, color: const Color(0xFF2E7D32), textColor: Colors.green[900]!
                         )),

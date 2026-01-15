@@ -1,4 +1,5 @@
 import 'package:cuantrack/Auth/login.dart';
+import 'package:cuantrack/page/splash_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -27,7 +28,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
         useMaterial3: true,
       ),
-      home: LoginPage(),
+      home: SplashPage(),
     );
   }
 }

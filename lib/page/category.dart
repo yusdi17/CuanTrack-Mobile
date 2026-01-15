@@ -191,7 +191,7 @@ class _CategoryPageState extends State<CategoryPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        "Daftar Produk", // Ubah judul jadi Produk
+                        "Daftar Kategori", // Ubah judul jadi Produk
                         style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                       Container(

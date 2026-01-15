@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 final Dio dio = Dio(
   BaseOptions(
-    baseUrl: 'http://92.113.124.171:8002/api',
+    baseUrl: 'https://cuantrack.web.id/api',
     connectTimeout: const Duration(seconds: 10),
     receiveTimeout: const Duration(seconds: 10),
     headers: {
