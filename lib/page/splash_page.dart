@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:cuantrack/layout/main_layout.dart';
 import 'package:flutter/material.dart';
@@ -16,14 +18,15 @@ class SplashPage extends StatefulWidget {
 
 class _SplashPageState extends State<SplashPage> {
   String _version = '';
+  final String _apiUrl = 'https://ccuantrack.web.id/api/config'; 
 
   @override
   void initState() {
     super.initState();
-    _startApp();
+    _checkServerAndStart();
   }
 
-  Future<void> _startApp() async {
+  Future<void> _checkServerAndStart() async {
     try {
       final info = await PackageInfo.fromPlatform();
       setState(() {
@@ -33,46 +36,96 @@ class _SplashPageState extends State<SplashPage> {
       debugPrint("Gagal ambil versi: $e");
     }
 
-    bool isMaintenance = false;
-    String maintenanceMsg = "Aplikasi sedang dalam perbaikan sistem.";
-
+    //HEALTH CHECK SERVER
     try {
-      final response = await http.get(Uri.parse('https://cuantrack.web.id/api/config'))
-          .timeout(const Duration(seconds: 5)); 
-      
+      final response = await http.get(Uri.parse(_apiUrl)).timeout(
+        const Duration(seconds: 8), 
+        onTimeout: () {
+          throw TimeoutException("Koneksi timeout");
+        },
+      );
+
       if (response.statusCode == 200) {
+        // --- SERVER HIDUP ---
         final data = jsonDecode(response.body);
-        isMaintenance = data['is_maintenance'] ?? false;
-        maintenanceMsg = data['message'] ?? maintenanceMsg;
+        bool isMaintenance = data['is_maintenance'] ?? false;
+        String msg = data['message'] ?? "Sistem sedang maintenance.";
+
+        await Future.delayed(const Duration(seconds: 2));
+        if (!mounted) return;
+
+        if (isMaintenance) {
+          _showMaintenanceDialog(msg);
+        } else {
+          _checkLoginStatus();
+        }
+
+      } else {
+        if (!mounted) return;
+        _showErrorDialog("Terjadi kesalahan pada server (Code: ${response.statusCode}).");
       }
+
     } catch (e) {
-      debugPrint("Gagal cek maintenance (mungkin offline): $e");
-      isMaintenance = false; 
+      if (!mounted) return;
+      String errorMsg = "Tidak dapat terhubung ke server.";
+      
+      if (e is TimeoutException) {
+        errorMsg = "Coba beberapa saat lagi";
+      } else if (e is SocketException) {
+        errorMsg = "Terjadi kesalahan server. Coba beberapa saat lagi.";
+      }
+
+      _showErrorDialog(errorMsg);
     }
+  }
 
-    await Future.delayed(const Duration(seconds: 3));
+  void _checkLoginStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
 
-    if (!mounted) return;
+    Widget nextPage = token != null ? const MainLayout() : const LoginPage();
 
-    if (isMaintenance) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => MaintenancePage(message: maintenanceMsg),
-        ),
-      );
-    } else {
-      // JIKA NORMAL: Cek Token Login
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('auth_token');
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => nextPage),
+    );
+  }
 
-      Widget nextPage = token != null ? const MainLayout() : const LoginPage();
+  // DIALOG ERROR & TUTUP APLIKASI
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.red),
+              SizedBox(width: 10),
+              Text("Gagal Terhubung"),
+            ],
+          ),
+          content: Text("$message\n\nAplikasi akan ditutup."),
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () {
+                SystemNavigator.pop(); 
+              },
+              child: const Text("OK, Tutup", style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => nextPage),
-      );
-    }
+  // MAINTENANCE PAGE
+  void _showMaintenanceDialog(String msg) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => MaintenancePage(message: msg)),
+    );
   }
 
   @override
@@ -81,35 +134,12 @@ class _SplashPageState extends State<SplashPage> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // BAGIAN TENGAH: LOGO
-          Center(
-            child: Image.asset('assets/logo.png', width: 250, height: 250),
-          ),
-
+          Center(child: Image.asset('assets/logo.png', width: 250, height: 250)),
           Align(
             alignment: Alignment.bottomCenter,
             child: Padding(
               padding: const EdgeInsets.only(bottom: 30),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    "Developed by Yusdi",
-                    style: TextStyle(
-                      color: Colors.grey[700],
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "Versi $_version",
-                    style: TextStyle(
-                      color: Colors.grey[500],
-                      fontSize: 10,
-                    ),
-                  ),
-                ],
-              ),
+              child: Text("Versi $_version", style: TextStyle(color: Colors.grey[500])),
             ),
           ),
         ],
@@ -118,37 +148,26 @@ class _SplashPageState extends State<SplashPage> {
   }
 }
 
-//  HALAMAN MAINTENANCE ---
 class MaintenancePage extends StatelessWidget {
   final String message;
-
   const MaintenancePage({super.key, required this.message});
 
   @override
   Widget build(BuildContext context) {
-    // PopScope (atau WillPopScope) mencegah tombol back berfungsi
     return PopScope(
-      canPop: false, 
+      canPop: false,
       child: Scaffold(
-        backgroundColor: Colors.white,
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(30.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.engineering_rounded, size: 80, color: Colors.orange[800]),
+                const Icon(Icons.warning_amber_rounded, size: 80, color: Colors.orange),
                 const SizedBox(height: 20),
-                const Text(
-                  "Under Maintenance",
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
+                const Text("Under Maintenance", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 10),
-                Text(
-                  message,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey[600], fontSize: 16),
-                ),
+                Text(message, textAlign: TextAlign.center),
               ],
             ),
           ),
