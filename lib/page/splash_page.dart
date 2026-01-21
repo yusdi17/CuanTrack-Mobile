@@ -18,7 +18,7 @@ class SplashPage extends StatefulWidget {
 
 class _SplashPageState extends State<SplashPage> {
   String _version = '';
-  final String _apiUrl = 'https://ccuantrack.web.id/api/config'; 
+  final String _apiUrl = 'https://cuantrack.web.id/api/config'; 
 
   @override
   void initState() {
